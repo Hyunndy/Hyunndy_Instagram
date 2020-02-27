@@ -16,6 +16,7 @@ import com.example.hyunndy_instagram.LoginActivity
 import com.example.hyunndy_instagram.MainActivity
 import com.example.hyunndy_instagram.R
 import com.example.hyunndy_instagram.navigation.model.ContentDTO
+import com.example.hyunndy_instagram.navigation.model.FollowDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
@@ -72,6 +73,10 @@ class UserFragment : Fragment() {
                 mainactivity?.toolbar_title_image?.visibility = View.GONE
                 mainactivity?.toolbar_username?.visibility = View.VISIBLE
                 mainactivity?.toolbar_btn_back?.visibility = View.VISIBLE
+
+                fragmentView?.account_btn_follow_signout?.setOnClickListener { view->
+                    requestFollow()
+                }
             }
         }
 
@@ -83,8 +88,83 @@ class UserFragment : Fragment() {
             photoPickerIntent.type = "image/*"
             activity?.startActivityForResult(photoPickerIntent, PICK_PROFILE_FROM_ALBUM)
         }
+
+        getProfileImage()
         return fragmentView
     }
+
+    fun requestFollow(){
+        // 나의 계정에는 누구를 팔로우 하는지.
+        var tsDocFollowing = firestore?.collection("users")?.document(currentUserUid!!)
+        firestore?.runTransaction { transaction ->
+            var followDTO = transaction.get(tsDocFollowing!!).toObject(FollowDTO::class.java)
+            if(followDTO == null){
+                followDTO = FollowDTO()
+                followDTO!!.followerCount = 1
+                followDTO!!.followers[uid!!] = true
+
+                transaction.set(tsDocFollowing, followDTO)
+                return@runTransaction // 트랜잭션을 닫음.
+            }
+
+            //  내가 상대방을 팔로우한 상태인 경우
+            if(followDTO.followings.containsKey(uid)){
+                // 팔로잉 취소
+                followDTO?.followerCount = followDTO!!.followerCount -1
+                followDTO?.followers?.remove(uid)
+            }else{
+                //팔로잉 함
+                followDTO!!.followerCount = followDTO!!.followerCount + 1
+                followDTO?.followers[uid!!] = true
+            }
+
+            // db로 저장
+            transaction.set(tsDocFollowing, followDTO)
+            return@runTransaction
+        }
+
+        // 상대방 계정에는 또다른 타인이 팔로워하는 부분
+
+        // 내가 팔로잉할 상대방의 계정에 접근하는 코드
+        var tsDocFollower = firestore?.collection("users")?.document(uid!!)
+        firestore?.runTransaction{transaction ->
+            var followDTO = transaction.get(tsDocFollower!!).toObject(FollowDTO::class.java)
+            if(followDTO == null) {
+                followDTO = FollowDTO()
+                followDTO!!.followerCount = 1
+                followDTO!!.followers[currentUserUid!!] = true
+
+                transaction.set(tsDocFollower, followDTO!!)
+                return@runTransaction
+            }
+
+            // it cancel my follower when i follow a third person
+            if(followDTO!!.followers.containsKey(currentUserUid)){
+                followDTO!!.followerCount = followDTO!!.followerCount -1
+                followDTO!!.followers?.remove(currentUserUid!!)
+            } else{
+                // it add my foloowers when i dont follow a third person
+                followDTO!!.followerCount = followDTO!!.followerCount +1
+                followDTO!!.followers[currentUserUid!!] = true
+            }
+
+            transaction.set(tsDocFollower, followDTO!!)
+            return@runTransaction
+
+        }
+    }
+
+    fun getProfileImage(){
+        firestore?.collection("profileImages")?.document(uid!!)?.addSnapshotListener { documentSnapshot, firebaseFirestoreException ->
+            if(documentSnapshot == null) return@addSnapshotListener
+
+            if(documentSnapshot.data != null){
+                var url = documentSnapshot?.data!!["image"]
+                Glide.with(activity!!).load(url).apply(RequestOptions().circleCrop()).into(fragmentView?.account_iv_profile!!)
+            }
+        }
+    }
+
 
     inner class UserFragmentRecyclerViewAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         var contentsDTOs: ArrayList<ContentDTO> = arrayListOf()
@@ -133,7 +213,5 @@ class UserFragment : Fragment() {
         override fun getItemCount(): Int {
             return contentsDTOs.size
         }
-
-
     }
 }
