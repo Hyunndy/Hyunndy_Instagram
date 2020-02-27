@@ -7,6 +7,7 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -15,12 +16,14 @@ import com.example.hyunndy_instagram.navigation.DetailViewFragment
 import com.example.hyunndy_instagram.navigation.GridFragment
 import com.example.hyunndy_instagram.navigation.UserFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.FirebaseAuth
 
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.jar.Manifest
 
 class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        setToolbarDefault()
         when(item.itemId){
             R.id.action_home->{
                 var detailViewFrament = DetailViewFragment()
@@ -45,11 +48,23 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
             }
             R.id.action_account->{
                 var userFragment = UserFragment()
+                //uid값을 넘겨주는 코드
+                var bundle = Bundle()
+                var uid = FirebaseAuth.getInstance().currentUser?.uid
+                bundle.putString("destinationUid", uid)
+                userFragment.arguments = bundle // 이게몰까??
                 supportFragmentManager.beginTransaction().replace(R.id.main_content, userFragment).commit()
                 return true
             }
         }
         return false
+    }
+
+    // 툴바 유저네임이랑 툴바 버튼이 기본적으로 숨겨진 상태가 되게 하기.
+    fun setToolbarDefault(){
+        toolbar_username.visibility = View.GONE
+        toolbar_btn_back.visibility = View.GONE
+        toolbar_title_image.visibility = View.VISIBLE
     }
 
 

@@ -50,7 +50,9 @@ class DetailViewFragment : Fragment() {
                 contentDTOs.clear()
                 contentUidList.clear()
 
+                if(querySnapshot == null) return@addSnapshotListener
                 for(snapshot in querySnapshot!!.documents) {
+
                     var item = snapshot.toObject(ContentDTO::class.java)
                     contentDTOs.add(item!!)
                     contentUidList.add(snapshot.id)
@@ -98,6 +100,16 @@ class DetailViewFragment : Fragment() {
 
             // 유저 프로필 매핑수
             Glide.with(holder.itemView.context).load(contentDTOs!![position].imageUrl).into(viewholder.detailviewitem_profile_image)
+
+            // 프로필 이미지를 누르면 상대방 계정 디테일 페이지로 넘어가게.
+            viewholder.detailviewitem_profile_image.setOnClickListener { view->
+                var fragment = UserFragment()
+                var bundle = Bundle()
+                bundle.putString("destinationUid", contentDTOs[position].uid)
+                bundle.putString("userId", contentDTOs[position].uid)
+                fragment.arguments = bundle
+                activity?.supportFragmentManager?.beginTransaction()?.replace(R.id.main_content, fragment)?.commit()
+            }
         }
 
         override fun getItemCount(): Int {

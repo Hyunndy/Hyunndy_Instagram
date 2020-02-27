@@ -145,6 +145,7 @@ class LoginActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
+        // 자동 로그인
         moveMainPage(auth?.currentUser)
     }
 }
