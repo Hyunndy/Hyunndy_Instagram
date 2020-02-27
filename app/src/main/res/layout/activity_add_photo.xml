@@ -39,7 +39,7 @@
         android:layout_toRightOf="@id/addphoto_image">
         <EditText
             android:hint="@string/hint_image_content"
-            android:id="@+id/ad"
+            android:id="@+id/addphoto_edit_explain"
             android:layout_width="match_parent"
             android:layout_height="100dp"/>
     </com.google.android.material.textfield.TextInputLayout>
