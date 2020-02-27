@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.hyunndy_instagram.R
 import com.example.hyunndy_instagram.navigation.model.ContentDTO
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.fragment_detail.view.*
 import kotlinx.android.synthetic.main.item_detail.view.*
@@ -17,6 +18,7 @@ import kotlinx.android.synthetic.main.item_detail.view.*
 class DetailViewFragment : Fragment() {
 
     var firestore : FirebaseFirestore? = null
+    var uid : String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -25,6 +27,7 @@ class DetailViewFragment : Fragment() {
     ): View? {
 
         firestore = FirebaseFirestore.getInstance()
+        uid = FirebaseAuth.getInstance().currentUser?.uid
 
 
         var view = LayoutInflater.from(activity).inflate(R.layout.fragment_detail, container, false)
@@ -79,12 +82,51 @@ class DetailViewFragment : Fragment() {
             // 좋아요 수
             viewholder.detailviewitem_favoritecounter_textview.text = "Likes " + contentDTOs!![position].favoriteCount
 
+            // 좋아요 버튼
+            viewholder.detailviewitem_favorite_imageview.setOnClickListener {  view->
+                favoriteEvent(position)
+            }
+
+            // 조아요 눌렀을 때 안눌렀을 때 하트 이모티콘 변화
+            if(contentDTOs!![position].favorites.containsKey(uid)){
+                //좋아요버튼을 클릭한상태
+                viewholder.detailviewitem_favorite_imageview.setImageResource(R.drawable.ic_favorite)
+            }else{
+                //조아요버튼 클릭안한상태
+                viewholder.detailviewitem_favorite_imageview.setImageResource(R.drawable.ic_favorite_border)
+            }
+
             // 유저 프로필 매핑수
             Glide.with(holder.itemView.context).load(contentDTOs!![position].imageUrl).into(viewholder.detailviewitem_profile_image)
         }
 
         override fun getItemCount(): Int {
             return contentDTOs.size
+        }
+
+        fun favoriteEvent(position : Int) {
+            // 내가 선택한 컨텐츠의 uid를 받아와서 보여주는 이벤트를 넣어줌.
+            var tsDoc = firestore?.collection("images")?.document(contentUidList[position])
+
+            firestore?.runTransaction { transaction ->
+                var contentDTO = transaction.get(tsDoc!!).toObject(ContentDTO::class.java)
+
+                // 좋아요버튼이 눌려있는것
+                if(contentDTO!!.favorites.containsKey(uid)){
+
+                    //when the button is clicked
+                    // 눌려있는걸 또 눌렀으니 좋아요가 사라져야지.
+                    contentDTO?.favoriteCount = contentDTO?.favoriteCount - 1
+                    contentDTO?.favorites.remove(uid)
+                }else {
+
+                    //when the button is not clicked
+                    contentDTO?.favoriteCount = contentDTO?.favoriteCount +1
+                    contentDTO?.favorites[uid!!] = true
+                }
+
+                transaction.set(tsDoc, contentDTO)
+            }
         }
     }
 }
